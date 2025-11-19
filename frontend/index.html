@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>이미지 자동 태깅 데모</title>
+</head>
+<body>
+  <h1>이미지 자동 태깅</h1>
+
+  <input type="file" id="imageInput" accept="image/*" />
+  <button id="uploadBtn">업로드 & 분석</button>
+
+  <h2>결과</h2>
+  <ul id="result"></ul>
+
+  <script>
+    const uploadBtn = document.getElementById("uploadBtn");
+    const imageInput = document.getElementById("imageInput");
+    const resultEl = document.getElementById("result");
+
+    uploadBtn.onclick = async () => {
+      const file = imageInput.files[0];
+      if (!file) {
+        alert("이미지를 선택해 주세요.");
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("image", file);
+
+      resultEl.innerHTML = "<li>분석 중...</li>";
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (data.error) {
+        resultEl.innerHTML = `<li>오류: ${data.error}</li>`;
+        return;
+      }
+
+      resultEl.innerHTML = "";
+      if (!data.labels || data.labels.length === 0) {
+        resultEl.innerHTML = "<li>태그를 찾지 못했습니다.</li>";
+        return;
+      }
+
+      data.labels.forEach(label => {
+        const li = document.createElement("li");
+        li.textContent = `${label.description} (${(label.score * 100).toFixed(1)}%)`;
+        resultEl.appendChild(li);
+      });
+    };
+  </script>
+</body>
+</html>
