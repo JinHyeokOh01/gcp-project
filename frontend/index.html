@@ -43,7 +43,6 @@
             padding: 40px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s;
             margin-bottom: 20px;
         }
 
@@ -99,13 +98,12 @@
             font-size: 1.1em;
             border-radius: 50px;
             cursor: pointer;
-            transition: transform 0.2s;
             display: none;
             margin: 20px auto;
         }
 
         .analyze-btn:hover {
-            transform: scale(1.05);
+            opacity: 0.9;
         }
 
         .analyze-btn:disabled {
@@ -125,13 +123,7 @@
             border-radius: 50%;
             width: 50px;
             height: 50px;
-            animation: spin 1s linear infinite;
             margin: 0 auto;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
         }
 
         .results {
@@ -161,12 +153,6 @@
             align-items: center;
             gap: 8px;
             box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
-            animation: fadeIn 0.5s;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
         }
 
         .tag-score {
@@ -249,7 +235,7 @@
         let selectedFile = null;
 
         // 백엔드 API URL (환경에 맞게 수정)
-        const API_URL = window.location.origin + '/api/upload';
+        const API_URL = window.location.origin + '/api/analyze';
 
         // 업로드 영역 클릭 이벤트
         uploadArea.addEventListener('click', () => {
@@ -355,7 +341,6 @@
             labels.forEach((label, index) => {
                 const tag = document.createElement('div');
                 tag.className = 'tag';
-                tag.style.animationDelay = `${index * 0.1}s`;
                 
                 const score = Math.round(label.score * 100);
                 tag.innerHTML = `
