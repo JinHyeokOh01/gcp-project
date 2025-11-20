@@ -1,16 +1,40 @@
 logsBucket: gs://gcloud-jho-cloudbuild-logs
+
 steps:
+  # 1) Docker 이미지 빌드
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['build', '-t', 'asia-northeast3-docker.pkg.dev/gcloud-jho/vision-repo/vision-go-demo', '.']
-
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'asia-northeast3-docker.pkg.dev/gcloud-jho/vision-repo/vision-go-demo']
-
-  - name: 'gcr.io/cloud-builders/kubectl'
     args:
-      - 'apply'
-      - '-f'
-      - 'deployment.yaml'
-    env:
-      - 'CLOUDSDK_COMPUTE_REGION=asia-northeast3'
-      - 'CLOUDSDK_CONTAINER_CLUSTER=vision-cluster'
+      [
+        'build',
+        '-t',
+        'asia-northeast3-docker.pkg.dev/gcloud-jho/gke-vision-repo/vision-go-demo',
+        '.',
+      ]
+
+  # 2) Artifact Registry에 푸시
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      [
+        'push',
+        'asia-northeast3-docker.pkg.dev/gcloud-jho/gke-vision-repo/vision-go-demo',
+      ]
+
+  # 3) GKE 크리덴셜 가져오기
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      [
+        'container',
+        'clusters',
+        'get-credentials',
+        'vision-cluster',
+        '--region',
+        'asia-northeast3',
+      ]
+
+  # 4) Deployment 적용
+  - name: 'gcr.io/cloud-builders/kubectl'
+    args: ['apply', '-f', 'deployment.yaml']
+
+  # 5) 롤링 업데이트 트리거
+  - name: 'gcr.io/cloud-builders/kubectl'
+    args: ['rollout', 'restart', 'deployment/vision-go-app']
