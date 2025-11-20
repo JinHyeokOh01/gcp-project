@@ -1,59 +1,391 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <title>이미지 자동 태깅 데모</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이미지 태그 분석기</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 2em;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover {
+            background: #f8f9ff;
+            border-color: #764ba2;
+        }
+
+        .upload-area.dragover {
+            background: #e8eaff;
+            border-color: #764ba2;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .upload-icon {
+            font-size: 4em;
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            color: #666;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+
+        .upload-subtext {
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        .preview-container {
+            margin: 20px 0;
+            text-align: center;
+            display: none;
+        }
+
+        .preview-image {
+            max-width: 100%;
+            max-height: 400px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .analyze-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            display: none;
+            margin: 20px auto;
+        }
+
+        .analyze-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .analyze-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .results {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .results h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .tag {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 0.95em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+            animation: fadeIn 0.5s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .tag-score {
+            background: rgba(255,255,255,0.3);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.85em;
+        }
+
+        .error {
+            display: none;
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border-left: 4px solid #c33;
+        }
+
+        .reset-btn {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 10px 25px;
+            font-size: 1em;
+            border-radius: 25px;
+            cursor: pointer;
+            margin-top: 20px;
+            display: none;
+        }
+
+        .reset-btn:hover {
+            background: #5a6268;
+        }
+    </style>
 </head>
 <body>
-  <h1>이미지 자동 태깅</h1>
+    <div class="container">
+        <h1>🖼️ 이미지 태그 분석기</h1>
+        
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📤</div>
+            <div class="upload-text">이미지를 드래그하거나 클릭하여 업로드</div>
+            <div class="upload-subtext">JPG, PNG, GIF 지원</div>
+            <input type="file" id="fileInput" accept="image/*">
+        </div>
 
-  <input type="file" id="imageInput" accept="image/*" />
-  <button id="uploadBtn">업로드 & 분석</button>
+        <div class="preview-container" id="previewContainer">
+            <img id="previewImage" class="preview-image" alt="미리보기">
+        </div>
 
-  <h2>결과</h2>
-  <ul id="result"></ul>
+        <button class="analyze-btn" id="analyzeBtn">🔍 이미지 분석하기</button>
 
-  <script>
-    const uploadBtn = document.getElementById("uploadBtn");
-    const imageInput = document.getElementById("imageInput");
-    const resultEl = document.getElementById("result");
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 15px; color: #666;">분석 중입니다...</p>
+        </div>
 
-    uploadBtn.onclick = async () => {
-      const file = imageInput.files[0];
-      if (!file) {
-        alert("이미지를 선택해 주세요.");
-        return;
-      }
+        <div class="error" id="error"></div>
 
-      const formData = new FormData();
-      formData.append("image", file);
+        <div class="results" id="results">
+            <h2>🏷️ 분석 결과</h2>
+            <div class="tags-container" id="tagsContainer"></div>
+            <button class="reset-btn" id="resetBtn">다시 분석하기</button>
+        </div>
+    </div>
 
-      resultEl.innerHTML = "<li>분석 중...</li>";
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const previewContainer = document.getElementById('previewContainer');
+        const previewImage = document.getElementById('previewImage');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const tagsContainer = document.getElementById('tagsContainer');
+        const errorDiv = document.getElementById('error');
+        const resetBtn = document.getElementById('resetBtn');
 
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData,
-      });
+        let selectedFile = null;
 
-      const data = await res.json();
+        // 백엔드 API URL (환경에 맞게 수정)
+        const API_URL = window.location.origin + '/api/upload';
 
-      if (data.error) {
-        resultEl.innerHTML = `<li>오류: ${data.error}</li>`;
-        return;
-      }
+        // 업로드 영역 클릭 이벤트
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
 
-      resultEl.innerHTML = "";
-      if (!data.labels || data.labels.length === 0) {
-        resultEl.innerHTML = "<li>태그를 찾지 못했습니다.</li>";
-        return;
-      }
+        // 파일 선택 이벤트
+        fileInput.addEventListener('change', handleFileSelect);
 
-      data.labels.forEach(label => {
-        const li = document.createElement("li");
-        li.textContent = `${label.description} (${(label.score * 100).toFixed(1)}%)`;
-        resultEl.appendChild(li);
-      });
-    };
-  </script>
+        // 드래그 앤 드롭 이벤트
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
+            }
+        });
+
+        // 분석 버튼 클릭 이벤트
+        analyzeBtn.addEventListener('click', analyzeImage);
+
+        // 리셋 버튼 클릭 이벤트
+        resetBtn.addEventListener('click', resetApp);
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        function handleFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showError('이미지 파일만 업로드 가능합니다.');
+                return;
+            }
+
+            selectedFile = file;
+            
+            // 미리보기 표시
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImage.src = e.target.result;
+                previewContainer.style.display = 'block';
+                analyzeBtn.style.display = 'block';
+                results.style.display = 'none';
+                errorDiv.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function analyzeImage() {
+            if (!selectedFile) return;
+
+            // UI 상태 변경
+            analyzeBtn.disabled = true;
+            loading.style.display = 'block';
+            results.style.display = 'none';
+            errorDiv.style.display = 'none';
+
+            try {
+                const formData = new FormData();
+                formData.append('image', selectedFile);
+
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`서버 오류: ${response.status}`);
+                }
+
+                const data = await response.json();
+                displayResults(data.labels);
+            } catch (error) {
+                showError('이미지 분석 중 오류가 발생했습니다: ' + error.message);
+            } finally {
+                loading.style.display = 'none';
+                analyzeBtn.disabled = false;
+            }
+        }
+
+        function displayResults(labels) {
+            tagsContainer.innerHTML = '';
+            
+            if (!labels || labels.length === 0) {
+                showError('분석 결과가 없습니다.');
+                return;
+            }
+
+            labels.forEach((label, index) => {
+                const tag = document.createElement('div');
+                tag.className = 'tag';
+                tag.style.animationDelay = `${index * 0.1}s`;
+                
+                const score = Math.round(label.score * 100);
+                tag.innerHTML = `
+                    <span>${label.description}</span>
+                    <span class="tag-score">${score}%</span>
+                `;
+                
+                tagsContainer.appendChild(tag);
+            });
+
+            results.style.display = 'block';
+            resetBtn.style.display = 'inline-block';
+            analyzeBtn.style.display = 'none';
+        }
+
+        function showError(message) {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        function resetApp() {
+            selectedFile = null;
+            fileInput.value = '';
+            previewContainer.style.display = 'none';
+            analyzeBtn.style.display = 'none';
+            results.style.display = 'none';
+            errorDiv.style.display = 'none';
+            resetBtn.style.display = 'none';
+            tagsContainer.innerHTML = '';
+        }
+    </script>
 </body>
 </html>
