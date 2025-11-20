@@ -1,0 +1,31 @@
+steps:
+  # 1) Docker 이미지 빌드
+  - name: gcr.io/cloud-builders/docker
+    args:
+      [
+        "build",
+        "-t",
+        "asia-northeast3-docker.pkg.dev/$PROJECT_ID/gke-vision-repo/vision-go-demo:$SHORT_SHA",
+        ".",
+      ]
+
+  # 2) Artifact Registry에 푸시
+  - name: gcr.io/cloud-builders/docker
+    args:
+      [
+        "push",
+        "asia-northeast3-docker.pkg.dev/$PROJECT_ID/gke-vision-repo/vision-go-demo:$SHORT_SHA",
+      ]
+
+  # 3) GKE에 롤링 업데이트 (이미지 교체)
+  - name: gcr.io/cloud-builders/gcloud
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        gcloud container clusters get-credentials vision-cluster --region asia-northeast3
+        kubectl set image deployment/vision-go-app \
+          vision-go-app=asia-northeast3-docker.pkg.dev/$PROJECT_ID/gke-vision-repo/vision-go-demo:$SHORT_SHA
+
+images:
+  - "asia-northeast3-docker.pkg.dev/$PROJECT_ID/gke-vision-repo/vision-go-demo:$SHORT_SHA"
